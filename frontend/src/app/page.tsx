@@ -82,7 +82,7 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl2 shadow-card">
             <Image
-              src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=1100&auto=format&fit=crop"
+              src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?q=80&w=1100&auto=format&fit=crop"
               alt="[VEHICLE IMAGE] — placeholder photo, replace with a real Methmi Enterprises photo"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
