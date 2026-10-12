@@ -41,8 +41,22 @@ describe("Strict server input validation", () => {
     expect(tourInputSchema.safeParse({ ...tourInput, name: "x".repeat(201) }).success).toBe(false);
     expect(bookingEnquirySchema.safeParse({ ...bookingInput, message: "x".repeat(1001) }).success).toBe(false);
   });
+  it("accepts email/password login and normalizes the email", () => {
+    expect(loginInputSchema.parse({ email: " Admin@Example.Invalid ", password: "example" })).toEqual({
+      email: "admin@example.invalid", password: "example",
+    });
+  });
+  it("requires a valid email and a nonempty password for login", () => {
+    for (const input of [
+      { password: "example" },
+      { email: "invalid", password: "example" },
+      { email: "admin@example.invalid", password: "" },
+    ]) {
+      expect(loginInputSchema.safeParse(input).success).toBe(false);
+    }
+  });
   it("rejects unexpected login and upload fields", () => {
-    expect(loginInputSchema.safeParse({ password: "example", role: "admin" }).success).toBe(false);
+    expect(loginInputSchema.safeParse({ email: "admin@example.invalid", password: "example", role: "admin" }).success).toBe(false);
     expect(uploadInputSchema.safeParse({ target: "tours", owner: "other" }).success).toBe(false);
     expect(uploadInputSchema.safeParse({ target: "../../private" }).success).toBe(false);
   });

@@ -6,12 +6,15 @@ export async function sendBookingEnquiryEmail(data: BookingEnquiryInput) {
   const to = process.env.BUSINESS_EMAIL;
   const from = process.env.EMAIL_FROM;
 
-  if (!apiKey || !to || !from) {
-    console.warn(
-      "[email] Skipped — RESEND_API_KEY, BUSINESS_EMAIL, or EMAIL_FROM is not set."
-    );
-    return { sent: false, reason: "not_configured" as const };
-  }
+ if (!apiKey || !to || !from) {
+  console.warn("[email] Email configuration is incomplete.", {
+    hasApiKey: !!apiKey,
+    hasBusinessEmail: !!to,
+    hasEmailFrom: !!from,
+  });
+
+  return { sent: false, reason: "not_configured" as const };
+}
 
   try {
     const { Resend } = await import("resend");
@@ -24,8 +27,10 @@ export async function sendBookingEnquiryEmail(data: BookingEnquiryInput) {
       subject: `New Booking Enquiry — ${data.fullName}`,
       html: renderEnquiryEmailHtml(data),
     });
-
-    if (result.error) return { sent: false, reason: "send_failed" as const };
+if (result.error) {
+  console.error("[email] Resend error:", result.error);
+  return { sent: false, reason: "send_failed" as const };
+}
     return { sent: true as const };
   } catch (error) {
     console.error("[email] Failed to send booking enquiry email:", error);

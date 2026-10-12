@@ -53,9 +53,13 @@ router.post("/booking-enquiry", async (req, res) => {
     try {
       const emailResult = await sendBookingEnquiryEmail(parsed.data);
       if (emailResult.sent) await markEnquiryEmailSent(stored.id);
-    } catch (error) {
-      console.error("[booking-enquiry] Notification failed for saved enquiry:", stored.id);
-    }
+   } catch (error) {
+  console.error(
+    "[booking-enquiry] Notification failed for saved enquiry:",
+    stored.id,
+    error
+  );
+}
     res.json({ success: true });
   } catch (error) {
     console.error("[booking-enquiry] Unexpected error:", error);
