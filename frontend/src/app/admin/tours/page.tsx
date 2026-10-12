@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import AdminNav from "../AdminNav";
 import ToursAdminClient from "./ToursAdminClient";
@@ -35,19 +36,34 @@ export default async function ToursAdminPage({
 }: Props) {
   const params = await searchParams;
 
-  const requestedPage = Number(params.page ?? "1");
+  // Read requested page number.
+  const rawPage = params.page;
 
+  const requestedPage = Number(rawPage ?? "1");
+
+  // Validate page number.
   const page =
     Number.isSafeInteger(requestedPage) &&
     requestedPage > 0
-      ? Math.min(requestedPage, 10000)
+      ? requestedPage
       : 1;
 
+  // Fetch tours using safe pagination.
   const {
     tours,
     total,
     totalPages,
+    currentPage,
   } = await getAdminToursPage(page);
+
+  // ICA 7 FIX:
+  // Redirect invalid or out-of-range pages.
+  if (
+    rawPage !== undefined &&
+    rawPage !== String(currentPage)
+  ) {
+    redirect(`/admin/tours?page=${currentPage}`);
+  }
 
   return (
     <>
@@ -55,11 +71,12 @@ export default async function ToursAdminPage({
 
       <main className="container-page py-10">
         <ToursAdminClient
-          key={page}
+          key={currentPage}
           initialTours={tours}
         />
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+
           <p className="text-sm text-ink-700">
             Total Tours: {total}
           </p>
@@ -69,9 +86,10 @@ export default async function ToursAdminPage({
               aria-label="Tours pagination"
               className="flex items-center gap-3"
             >
-              {page > 1 && (
+
+              {currentPage > 1 && (
                 <Link
-                  href={`/admin/tours?page=${page - 1}`}
+                  href={`/admin/tours?page=${currentPage - 1}`}
                   className="rounded-lg border px-4 py-2"
                 >
                   Previous
@@ -79,22 +97,23 @@ export default async function ToursAdminPage({
               )}
 
               <span className="text-sm">
-                Page {page} of {totalPages}
+                Page {currentPage} of {totalPages}
               </span>
 
-              {page < totalPages && (
+              {currentPage < totalPages && (
                 <Link
-                  href={`/admin/tours?page=${page + 1}`}
+                  href={`/admin/tours?page=${currentPage + 1}`}
                   className="rounded-lg border px-4 py-2"
                 >
                   Next
                 </Link>
               )}
+
             </nav>
           )}
+
         </div>
       </main>
     </>
   );
 }
-

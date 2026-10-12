@@ -46,18 +46,17 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Geometric, confident display face for headlines
+        // Use the Poppins font variable provided by next/font in layout.tsx.
         display: [
-          "Avenir Next",
-          "Poppins",
+          "var(--font-poppins)",
           "Segoe UI",
           "system-ui",
           "-apple-system",
           "sans-serif",
         ],
-        // Clean, highly legible body face
+        // Use the Inter font variable provided by next/font in layout.tsx.
         body: [
-          "Inter",
+          "var(--font-inter)",
           "Segoe UI",
           "system-ui",
           "-apple-system",

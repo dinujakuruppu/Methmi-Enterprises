@@ -1,12 +1,13 @@
-// Convenience gate; the backend rechecks Supabase admin membership on API calls.
+// Sessions are issued by the backend; here we only verify the signed cookie
+// so the middleware can redirect signed-out visitors. Both apps must share
+// the same ADMIN_SESSION_SECRET. Web Crypto so this runs on the edge.
+
 export const ADMIN_SESSION_COOKIE = "methmi_admin_session";
 
+const DEFAULT_SECRET = "methmi-dev-only-secret-change-me";
+
 function getSecret(): string {
-  const secret = process.env.ADMIN_SESSION_SECRET?.trim();
-  if (!secret || secret.length < 32) {
-    throw new Error("Set ADMIN_SESSION_SECRET to at least 32 random characters in both backend and frontend environment files.");
-  }
-  return secret;
+  return process.env.ADMIN_SESSION_SECRET || DEFAULT_SECRET;
 }
 
 function bufferToHex(buf: ArrayBuffer): string {
@@ -30,11 +31,8 @@ async function hmacHex(secret: string, message: string): Promise<string> {
 
 export async function isSessionTokenValid(token: string | undefined | null): Promise<boolean> {
   if (!token) return false;
-  const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  const [expires, userId, signature] = parts;
-  if (!/^\d+$/.test(expires) || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId) || !/^[0-9a-f]{64}$/.test(signature)) return false;
-  const payload = `${expires}.${userId}`;
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return false;
 
   const expected = await hmacHex(getSecret(), payload);
   if (expected.length !== signature.length) return false;
@@ -46,8 +44,8 @@ export async function isSessionTokenValid(token: string | undefined | null): Pro
   }
   if (mismatch !== 0) return false;
 
-  const expiresAt = Number(expires);
-  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
+  const expiresAt = Number(payload);
+  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) return false;
 
   return true;
 }

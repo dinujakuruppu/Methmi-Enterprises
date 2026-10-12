@@ -82,12 +82,56 @@ export async function requireAuthorizedAdmin() {
   return supabase;
 }
 
-// Read tours directly from Supabase on the server.
 export async function getAdminToursPage(page: number) {
   const supabase = await requireAuthorizedAdmin();
-  const offset = (page - 1) * ADMIN_TOURS_PAGE_SIZE;
 
-  const { data, count, error } = await supabase
+  // First get the total number of tours.
+  const { count, error: countError } = await supabase
+    .from("tours")
+    .select("slug", {
+      count: "exact",
+      head: true,
+    });
+
+  if (countError) {
+    console.error(
+      "Admin tours count failed:",
+      countError.code
+    );
+
+    throw new Error("Unable to count tours.");
+  }
+
+  const total = count ?? 0;
+
+  // Calculate the total number of valid pages.
+  const totalPages = Math.max(
+    1,
+    Math.ceil(total / ADMIN_TOURS_PAGE_SIZE)
+  );
+
+  // Ensure that the requested page is valid.
+  const currentPage =
+    Number.isSafeInteger(page) && page > 0
+      ? Math.min(page, totalPages)
+      : 1;
+
+  // Handle empty database without invalid range queries.
+  if (total === 0) {
+    return {
+      tours: [] as Tour[],
+      total,
+      totalPages,
+      currentPage,
+    };
+  }
+
+  // Calculate a safe database offset.
+  const offset =
+    (currentPage - 1) * ADMIN_TOURS_PAGE_SIZE;
+
+  // Fetch tours for the validated page.
+  const { data, error } = await supabase
     .from("tours")
     .select(
       `slug,
@@ -98,15 +142,21 @@ export async function getAdminToursPage(page: number) {
        highlights,
        included,
        starting_price,
-       image`,
-      { count: "exact" }
+       image`
     )
     .order("sort_order", { ascending: true })
     .order("slug", { ascending: true })
-    .range(offset, offset + ADMIN_TOURS_PAGE_SIZE - 1);
+    .range(
+      offset,
+      offset + ADMIN_TOURS_PAGE_SIZE - 1
+    );
 
   if (error) {
-    console.error("Admin tours query failed:", error.code);
+    console.error(
+      "Admin tours query failed:",
+      error.code
+    );
+
     throw new Error("Unable to load tours.");
   }
 
@@ -124,11 +174,10 @@ export async function getAdminToursPage(page: number) {
     image: row.image,
   }));
 
-  const total = count ?? 0;
-
   return {
     tours,
     total,
-    totalPages: Math.max(1, Math.ceil(total / ADMIN_TOURS_PAGE_SIZE)),
+    totalPages,
+    currentPage,
   };
 }
