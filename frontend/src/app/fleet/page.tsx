@@ -22,8 +22,12 @@ export default async function FleetPage() {
         description="7 well-maintained vehicles — from private sedans to a full-size coach — ready for airport transfers and multi-day tours across Sri Lanka."
       />
       <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {vehicles.map((vehicle) => (
-          <VehicleCard key={vehicle.slug} vehicle={vehicle} />
+        {vehicles.map((vehicle, index) => (
+          <VehicleCard
+            key={vehicle.slug}
+            vehicle={vehicle}
+            isLcp={index === 0}
+          />
         ))}
       </div>
     </section>

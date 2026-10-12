@@ -49,7 +49,7 @@ export default function Hero() {
         <div className="relative">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl2 shadow-card">
             <Image
-              src="https://images.unsplash.com/photo-1517263904808-5dc91e3e7044?q=80&w=1200&auto=format&fit=crop"
+              src="https://images.unsplash.com/photo-1542296332-2e4473faf563?q=80&w=1200&auto=format&fit=crop"
               alt="[VEHICLE IMAGE] — placeholder airport transfer vehicle photo, replace with a real Methmi Enterprises vehicle image"
               fill
               priority

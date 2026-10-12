@@ -1,15 +1,10 @@
-// The backend issues HttpOnly session cookies. Verify the same three-part
-// "expires.userId.signature" token format in the frontend's Edge middleware
-// and server-only admin pages. Both deployments must use the same secret.
-
+// Convenience gate; the backend rechecks Supabase admin membership on API calls.
 export const ADMIN_SESSION_COOKIE = "methmi_admin_session";
 
 function getSecret(): string {
   const secret = process.env.ADMIN_SESSION_SECRET?.trim();
   if (!secret || secret.length < 32) {
-    throw new Error(
-      "Set ADMIN_SESSION_SECRET to the same 32+ character value in both frontend and backend environments.",
-    );
+    throw new Error("Set ADMIN_SESSION_SECRET to at least 32 random characters in both backend and frontend environment files.");
   }
   return secret;
 }
@@ -33,29 +28,18 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return bufferToHex(signature);
 }
 
-/** Check signature, user ID structure and expiry without exposing session data. */
-export async function isSessionTokenValid(
-  token: string | undefined | null,
-): Promise<boolean> {
+export async function isSessionTokenValid(token: string | undefined | null): Promise<boolean> {
   if (!token) return false;
-
   const parts = token.split(".");
   if (parts.length !== 3) return false;
-
   const [expires, userId, signature] = parts;
-  if (
-    !/^\d+$/.test(expires) ||
-    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId) ||
-    !/^[0-9a-f]{64}$/.test(signature)
-  ) {
-    return false;
-  }
-
+  if (!/^\d+$/.test(expires) || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId) || !/^[0-9a-f]{64}$/.test(signature)) return false;
   const payload = `${expires}.${userId}`;
+
   const expected = await hmacHex(getSecret(), payload);
   if (expected.length !== signature.length) return false;
 
-  // Compare the entire signature without returning at the first mismatch.
+  // Constant-time-ish comparison.
   let mismatch = 0;
   for (let i = 0; i < expected.length; i += 1) {
     mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);

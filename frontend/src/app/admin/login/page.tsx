@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Lock, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function AdminLoginPage() {
@@ -13,7 +13,6 @@ export default function AdminLoginPage() {
 }
 
 function AdminLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,31 +21,48 @@ function AdminLoginForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
 
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({ email: email.trim(), password }),
+        signal: controller.signal,
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Invalid email or password.");
-        setLoading(false);
+        setError(data.error || "Could not sign in. Please try again.");
         return;
       }
 
-      const requestedNext = searchParams.get("next") || "/admin";
-      const next = requestedNext.startsWith("/admin") && !requestedNext.startsWith("//")
-        ? requestedNext
-        : "/admin";
-      router.push(next);
-      router.refresh();
+      // Confirm that the browser kept the cookie before opening a protected page.
+      const session = await fetch("/api/admin/session", {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!session.ok) {
+        setError(session.status === 401
+          ? "Your sign-in session could not be saved. Please try again."
+          : "Could not verify your sign-in session. Please try again.");
+        return;
+      }
+      const next = searchParams.get("next") || "/admin";
+      const safeNext = /^\/admin(?:\/|$|\?)/.test(next) && !next.includes("\\") && !next.startsWith("/admin/login") ? next : "/admin";
+      // A full navigation uses the new cookie and avoids stale router/prefetch state.
+      window.location.replace(safeNext);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(controller.signal.aborted
+        ? "Sign-in took too long. Please check your connection and try again."
+        : "Could not connect to the server. Please try again.");
+    } finally {
+      window.clearTimeout(timeout);
       setLoading(false);
     }
   }
@@ -71,14 +87,12 @@ function AdminLoginForm() {
             </label>
             <input
               id="email"
-              type="email"
               name="email"
+              type="email"
               autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
               autoFocus
               required
-              maxLength={254}
+              disabled={loading}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-ink-900/15 px-3.5 py-2.5 text-sm focus:border-ocean-500 focus:outline-none focus:ring-2 focus:ring-ocean-500/30"
@@ -91,9 +105,10 @@ function AdminLoginForm() {
             </label>
             <input
               id="password"
-              type="password"
               name="password"
+              type="password"
               autoComplete="current-password"
+              disabled={loading}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -103,7 +118,7 @@ function AdminLoginForm() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+            <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               {error}
             </div>

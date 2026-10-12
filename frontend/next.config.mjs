@@ -8,6 +8,7 @@ const workspaceRoot = join(__dirname, "..");
 
 // Must be set at build time too — rewrites are resolved during the build.
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+const isVercel = process.env.VERCEL === "1";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -15,7 +16,15 @@ const nextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
+ 
+
   async rewrites() {
+    // Vercel Services handles API requests in production.
+    if (isVercel) {
+      return [];
+    }
+
+    // Local development uses the Express backend.
     return [
       {
         source: "/api/:path*",
@@ -23,6 +32,8 @@ const nextConfig = {
       },
     ];
   },
+
+
   images: {
     remotePatterns: [
       {

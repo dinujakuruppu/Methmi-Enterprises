@@ -8,9 +8,13 @@ import WhatsAppButton from "./WhatsAppButton";
 
 interface VehicleCardProps {
   vehicle: Vehicle;
+  isLcp?: boolean;
 }
 
-export default function VehicleCard({ vehicle }: VehicleCardProps) {
+export default function VehicleCard({
+  vehicle,
+  isLcp = false,
+}: VehicleCardProps) {
   const imageSrc = resolveImage(vehicle.image, PLACEHOLDER_IMAGE);
   const isPlaceholder = imageSrc === PLACEHOLDER_IMAGE;
 
@@ -21,11 +25,13 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
           src={imageSrc}
           alt={
             isPlaceholder
-              ? `[VEHICLE IMAGE] — placeholder photo for ${vehicle.name}, replace with a real photo`
+              ? `Placeholder photo for ${vehicle.name}`
               : vehicle.name
           }
           fill
-          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 128px) / 3), (min-width: 640px) calc((100vw - 88px) / 2), calc(100vw - 40px)"
+          loading={isLcp ? "eager" : "lazy"}
+          fetchPriority={isLcp ? "high" : "auto"}
           className="object-cover"
         />
         <span className="absolute left-3 top-3 rounded-full bg-ocean-700/90 px-3 py-1 text-xs font-bold text-white">

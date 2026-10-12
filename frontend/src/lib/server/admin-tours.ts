@@ -82,55 +82,31 @@ export async function requireAuthorizedAdmin() {
   return supabase;
 }
 
+// Read tours directly from Supabase on the server.
 export async function getAdminToursPage(page: number) {
   const supabase = await requireAuthorizedAdmin();
 
-  // First get the total number of tours.
+  // Count first: out-of-range requests must never reach the data range query.
   const { count, error: countError } = await supabase
     .from("tours")
-    .select("slug", {
-      count: "exact",
-      head: true,
-    });
+    .select("slug", { count: "exact", head: true });
 
   if (countError) {
-    console.error(
-      "Admin tours count failed:",
-      countError.code
-    );
-
+    console.error("Admin tours count failed:", countError.code);
     throw new Error("Unable to count tours.");
   }
 
   const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_TOURS_PAGE_SIZE));
+  const currentPage = Number.isSafeInteger(page) && page > 0
+    ? Math.min(page, totalPages)
+    : 1;
 
-  // Calculate the total number of valid pages.
-  const totalPages = Math.max(
-    1,
-    Math.ceil(total / ADMIN_TOURS_PAGE_SIZE)
-  );
-
-  // Ensure that the requested page is valid.
-  const currentPage =
-    Number.isSafeInteger(page) && page > 0
-      ? Math.min(page, totalPages)
-      : 1;
-
-  // Handle empty database without invalid range queries.
   if (total === 0) {
-    return {
-      tours: [] as Tour[],
-      total,
-      totalPages,
-      currentPage,
-    };
+    return { tours: [] as Tour[], total, totalPages, currentPage };
   }
 
-  // Calculate a safe database offset.
-  const offset =
-    (currentPage - 1) * ADMIN_TOURS_PAGE_SIZE;
-
-  // Fetch tours for the validated page.
+  const offset = (currentPage - 1) * ADMIN_TOURS_PAGE_SIZE;
   const { data, error } = await supabase
     .from("tours")
     .select(
@@ -142,21 +118,14 @@ export async function getAdminToursPage(page: number) {
        highlights,
        included,
        starting_price,
-       image`
+       image`,
     )
     .order("sort_order", { ascending: true })
     .order("slug", { ascending: true })
-    .range(
-      offset,
-      offset + ADMIN_TOURS_PAGE_SIZE - 1
-    );
+    .range(offset, offset + ADMIN_TOURS_PAGE_SIZE - 1);
 
   if (error) {
-    console.error(
-      "Admin tours query failed:",
-      error.code
-    );
-
+    console.error("Admin tours query failed:", error.code);
     throw new Error("Unable to load tours.");
   }
 

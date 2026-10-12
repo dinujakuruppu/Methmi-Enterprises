@@ -36,19 +36,13 @@ export default async function ToursAdminPage({
 }: Props) {
   const params = await searchParams;
 
-  // Read requested page number.
-  const rawPage = params.page;
+  const requestedPage = Number(params.page ?? "1");
 
-  const requestedPage = Number(rawPage ?? "1");
-
-  // Validate page number.
   const page =
-    Number.isSafeInteger(requestedPage) &&
-    requestedPage > 0
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
       ? requestedPage
       : 1;
 
-  // Fetch tours using safe pagination.
   const {
     tours,
     total,
@@ -56,12 +50,8 @@ export default async function ToursAdminPage({
     currentPage,
   } = await getAdminToursPage(page);
 
-  // ICA 7 FIX:
-  // Redirect invalid or out-of-range pages.
-  if (
-    rawPage !== undefined &&
-    rawPage !== String(currentPage)
-  ) {
+  // Keep the URL and pagination controls on an existing page.
+  if (params.page !== undefined && params.page !== String(currentPage)) {
     redirect(`/admin/tours?page=${currentPage}`);
   }
 
@@ -76,7 +66,6 @@ export default async function ToursAdminPage({
         />
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-
           <p className="text-sm text-ink-700">
             Total Tours: {total}
           </p>
@@ -86,7 +75,6 @@ export default async function ToursAdminPage({
               aria-label="Tours pagination"
               className="flex items-center gap-3"
             >
-
               {currentPage > 1 && (
                 <Link
                   href={`/admin/tours?page=${currentPage - 1}`}
@@ -108,12 +96,11 @@ export default async function ToursAdminPage({
                   Next
                 </Link>
               )}
-
             </nav>
           )}
-
         </div>
       </main>
     </>
   );
 }
+

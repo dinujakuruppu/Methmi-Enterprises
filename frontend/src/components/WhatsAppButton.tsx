@@ -52,8 +52,8 @@ export default function WhatsAppButton({
 
   const variantClasses =
     variant === "solid"
-      ? "bg-palm-500 text-white hover:bg-palm-600 shadow-card"
-      : "border-2 border-palm-500 text-palm-600 hover:bg-palm-50";
+      ? "bg-palm-600 text-white hover:bg-palm-700 shadow-card"
+      : "border-2 border-palm-600 text-palm-700 hover:bg-palm-50";
 
   return (
     <a
