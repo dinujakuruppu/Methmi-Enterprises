@@ -1,13 +1,17 @@
-// Sessions are issued by the backend; here we only verify the signed cookie
-// so the middleware can redirect signed-out visitors. Both apps must share
-// the same ADMIN_SESSION_SECRET. Web Crypto so this runs on the edge.
+// The backend issues HttpOnly session cookies. Verify the same three-part
+// "expires.userId.signature" token format in the frontend's Edge middleware
+// and server-only admin pages. Both deployments must use the same secret.
 
 export const ADMIN_SESSION_COOKIE = "methmi_admin_session";
 
-const DEFAULT_SECRET = "methmi-dev-only-secret-change-me";
-
 function getSecret(): string {
-  return process.env.ADMIN_SESSION_SECRET || DEFAULT_SECRET;
+  const secret = process.env.ADMIN_SESSION_SECRET?.trim();
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "Set ADMIN_SESSION_SECRET to the same 32+ character value in both frontend and backend environments.",
+    );
+  }
+  return secret;
 }
 
 function bufferToHex(buf: ArrayBuffer): string {
@@ -29,23 +33,37 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return bufferToHex(signature);
 }
 
-export async function isSessionTokenValid(token: string | undefined | null): Promise<boolean> {
+/** Check signature, user ID structure and expiry without exposing session data. */
+export async function isSessionTokenValid(
+  token: string | undefined | null,
+): Promise<boolean> {
   if (!token) return false;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) return false;
 
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+
+  const [expires, userId, signature] = parts;
+  if (
+    !/^\d+$/.test(expires) ||
+    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId) ||
+    !/^[0-9a-f]{64}$/.test(signature)
+  ) {
+    return false;
+  }
+
+  const payload = `${expires}.${userId}`;
   const expected = await hmacHex(getSecret(), payload);
   if (expected.length !== signature.length) return false;
 
-  // Constant-time-ish comparison.
+  // Compare the entire signature without returning at the first mismatch.
   let mismatch = 0;
   for (let i = 0; i < expected.length; i += 1) {
     mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
   }
   if (mismatch !== 0) return false;
 
-  const expiresAt = Number(payload);
-  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) return false;
+  const expiresAt = Number(expires);
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
 
   return true;
 }

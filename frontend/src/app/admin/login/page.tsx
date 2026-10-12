@@ -15,6 +15,7 @@ export default function AdminLoginPage() {
 function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,17 +29,20 @@ function AdminLoginForm() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Incorrect password.");
+        setError(data.error || "Invalid email or password.");
         setLoading(false);
         return;
       }
 
-      const next = searchParams.get("next") || "/admin";
+      const requestedNext = searchParams.get("next") || "/admin";
+      const next = requestedNext.startsWith("/admin") && !requestedNext.startsWith("//")
+        ? requestedNext
+        : "/admin";
       router.push(next);
       router.refresh();
     } catch {
@@ -62,13 +66,34 @@ function AdminLoginForm() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
+            <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-ink-800">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              autoFocus
+              required
+              maxLength={254}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-ink-900/15 px-3.5 py-2.5 text-sm focus:border-ocean-500 focus:outline-none focus:ring-2 focus:ring-ocean-500/30"
+              placeholder="admin@example.com"
+            />
+          </div>
+          <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-ink-800">
               Password
             </label>
             <input
               id="password"
               type="password"
-              autoFocus
+              name="password"
+              autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
