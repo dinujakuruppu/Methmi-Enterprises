@@ -16,7 +16,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@supabase/supabase-js": "^2.112.2",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
