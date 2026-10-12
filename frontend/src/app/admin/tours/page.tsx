@@ -39,7 +39,8 @@ export default async function ToursAdminPage({
   const requestedPage = Number(params.page ?? "1");
 
   const page =
-    Number.isSafeInteger(requestedPage) && requestedPage > 0
+    Number.isSafeInteger(requestedPage) &&
+    requestedPage > 0
       ? requestedPage
       : 1;
 
@@ -50,7 +51,6 @@ export default async function ToursAdminPage({
     currentPage,
   } = await getAdminToursPage(page);
 
-  // Keep the URL and pagination controls on an existing page.
   if (params.page !== undefined && params.page !== String(currentPage)) {
     redirect(`/admin/tours?page=${currentPage}`);
   }
