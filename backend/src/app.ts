@@ -36,6 +36,20 @@ export function createApp() {
 
   app.use("/api/uploads", express.static(LOCAL_UPLOAD_DIR, { maxAge: "1y", fallthrough: true }));
 
+  // Safe public endpoint for deployment smoke tests and ICA evidence.
+  app.get("/api/version", (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      service: "methmi-backend",
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
+    });
+  });
+
+  app.get("/", (_req, res) => {
+    res.json({ ok: true, service: "methmi-backend", endpoints: ["/health", "/api/version"] });
+  });
+
   app.get("/health", (_req, res) => {
     res.json({
       ok: true,
@@ -74,3 +88,6 @@ export function createApp() {
   return app;
 
 }
+
+// Vercel Express entry: importing this module provides a handler without listening on a port.
+export default createApp();
